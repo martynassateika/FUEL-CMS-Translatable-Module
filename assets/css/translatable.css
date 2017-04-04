@@ -1,0 +1,5 @@
+.ico_translatable_item { background-image: url(../images/ico_translatable_item.png); }
+.ico_translatable_item_translation {
+    background-image: url(../images/ico_translatable_item_translation.png);
+    background-position-y: 4px;
+}
