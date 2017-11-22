@@ -37,6 +37,12 @@ class Translatable_item_model extends Base_module_model
     {
         $fields = parent::form_fields($values, $related);
 
+        $fields['translations_fieldset'] = array(
+            'type' => 'section',
+            'tag' => 'h3',
+            'value' => lang('translation_item_model_translations'),
+        );
+
         $translatable_id = $this->_determine_key_field_value($values);
         if (isset($translatable_id)) {
             // Only show translations if the translatable item is saved
