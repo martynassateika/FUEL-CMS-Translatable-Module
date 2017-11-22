@@ -14,6 +14,7 @@ class Translatable_item_model extends Base_module_model
     {
         parent::__construct('translatable_item'); // table name
         $this->load->model('translatable_item_translation_model', 'translations');
+        $this->load->helper('translatable');
     }
 
     public function list_items($limit = NULL, $offset = NULL, $col = 'id', $order = 'asc', $just_count = FALSE)
@@ -36,25 +37,84 @@ class Translatable_item_model extends Base_module_model
     {
         $fields = parent::form_fields($values, $related);
 
-        // If the item has been persisted, then the embedded list shows all
-        // the translations linked to the item. Otherwise, a notification is
-        // displayed (see 'notification' method).
-        if (isset($values[$this->key_field])) {
-            $where = array(
-                'translatable_item_id' => $values[$this->key_field],
+        $fields['translations_fieldset'] = array(
+            'type' => 'section',
+            'tag' => 'h3',
+            'value' => lang('translation_item_model_translations'),
+        );
+
+        $translatable_id = $this->_determine_key_field_value($values);
+        if (isset($translatable_id)) {
+            // Only show translations if the translatable item is saved
+            $translation_fields = $this->setup_fields_for_translations(
+                $this->find_translations($values),
+                $this->fuel->config('languages')
             );
-            $fields['translations_embedded_list'] = array(
-                'type' => 'embedded_list',
-                'label' => lang('translation_item_model_translations'),
-                'create_button_label' => lang('translation_item_model_add_translation'),
-                'module' => array(TRANSLATABLE_FOLDER => 'translatable_item_translation_model'),
-                'cols' => array('language', 'text'),
-                'method_params' => array('where' => $where),
-                'create_url_params' => $where,
-            );
+            $fields = array_merge($fields, $translation_fields);
         }
 
         return $fields;
+    }
+
+    private function field_name_for_translation($language_key)
+    {
+        return $this->get_translation_field_name_prefix() . $language_key;
+    }
+
+    private function get_translation_field_name_prefix()
+    {
+        return "translation_";
+    }
+
+    /**
+     * Sets up fields for each translation by retrieving existing translations
+     * from the database and creating empty inputs for new ones.
+     *
+     * This allows users to change the language set in the configuration without
+     * having to worry about the state of the database.
+     *
+     * @param $database_translations array existing translations in the database
+     * @param $supported_languages   array set of languages for translations
+     * @return array combined set of translations
+     */
+    private function setup_fields_for_translations($database_translations, $supported_languages)
+    {
+        // Set up a map from language to translation text for faster lookup
+        $lang_key_to_translation_map = array();
+        foreach ($database_translations as $translation) {
+            $lang_key_to_translation_map[$translation->language] = $translation->text;
+        }
+
+        $fields = array();
+        foreach ($supported_languages as $language_key => $language) {
+            $field_name = $this->field_name_for_translation($language_key);
+            $fields[$field_name] = array(
+                'label' => $this->get_translation_label($language_key, $language)
+            );
+            if (!in_array($language_key, array_keys($lang_key_to_translation_map))) {
+                // Translation has not yet been persisted
+                $fields[$field_name]['value'] = '';
+            } else {
+                // Show existing translation
+                $existing_translation = $lang_key_to_translation_map[$language_key];
+                $fields[$field_name]['value'] = $existing_translation;
+            }
+        }
+        return $fields;
+    }
+
+    /**
+     * @param $language_key string two-letter country code (for flag search)
+     * @param $language     string language name
+     * @return string label to assign to the translation field
+     */
+    private function get_translation_label($language_key, $language)
+    {
+        $flag_icon = get_flag_for_language($language_key);
+        if ($flag_icon == null) {
+            $flag_icon = '';
+        }
+        return sprintf('%s %s', $flag_icon, $language);
     }
 
     /**
@@ -71,6 +131,22 @@ class Translatable_item_model extends Base_module_model
     }
 
     /**
+     * @param $values array values of this translatable item
+     * @return array existing translations for this translatable item, if saved,
+     *         otherwise an empty array
+     */
+    private function find_translations($values)
+    {
+        $translatable_id = $this->_determine_key_field_value($values);
+        if (!isset($translatable_id)) {
+            return array();
+        }
+        return $this->translations->find_all(array(
+            'translatable_item_id' => $translatable_id
+        ));
+    }
+
+    /**
      * Ensures translations are deleted along with the parent translatable item
      * @param $where array condition for deleting
      */
@@ -80,6 +156,52 @@ class Translatable_item_model extends Base_module_model
         $this->translations->delete(array(
             'translatable_item_id' => $this->_determine_key_field_value($where)
         ));
+    }
+
+    /**
+     * @param array $values
+     * @return array
+     */
+    public function on_before_post($values = array())
+    {
+        $values = parent::on_before_post($values);
+
+        if (!isset($values[$this->key_field()])) {
+            // Item has not been saved before. Translation fields will not
+            // have been shown so no additional processing is needed.
+            return $values;
+        }
+
+        // Filter the set of all POSTed fields, retaining only the translations
+        $translation_fields = array_filter($values, function ($value) {
+            return starts_with($value, $this->get_translation_field_name_prefix());
+        }, ARRAY_FILTER_USE_KEY);
+
+        $translatable_item_id = $values[$this->key_field()];
+        $all_languages = $this->fuel->config('languages');
+
+        // Update existing translations, and insert new ones
+        foreach ($all_languages as $key => $language) {
+            $field_name = $this->field_name_for_translation($key);
+            if (array_key_exists($field_name, $translation_fields)) {
+                $translation = $translation_fields[$field_name];
+                if (!$this->find_translation($translatable_item_id, $key)) {
+                    $this->translations->insert(array(
+                        'translatable_item_id' => $translatable_item_id,
+                        'text' => $translation,
+                        'language' => $key
+                    ));
+                } else {
+                    $this->translations->update(array(
+                        'text' => $translation,
+                    ), array(
+                        'translatable_item_id' => $translatable_item_id,
+                        'language' => $key
+                    ));
+                }
+            }
+        }
+        return $values;
     }
 
     /**

@@ -1,9 +1,9 @@
-<?php  
+<?php
 /**
  * FUEL CMS
  * http://www.getfuelcms.com
  *
- * An open source Content Management System based on the 
+ * An open source Content Management System based on the
  * Codeigniter framework (http://codeigniter.com)
  *
  * @package		FUEL CMS
@@ -27,5 +27,16 @@
 
 // --------------------------------------------------------------------
 
-
-// put your helper functions here
+/**
+ * @param $language_key string a two-letter country code
+ * @return string|null image of the flag if found, else null
+ */
+function get_flag_for_language($language_key) {
+    $filename = "$language_key.png";
+    if (asset_exists("flag_icons/$filename", 'images', TRANSLATABLE_FOLDER)) {
+        $path = img_path("flag_icons/$filename", TRANSLATABLE_FOLDER, TRUE);
+        return img($path);
+    } else {
+        return null;
+    }
+}
