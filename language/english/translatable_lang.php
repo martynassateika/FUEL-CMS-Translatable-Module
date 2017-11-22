@@ -5,6 +5,7 @@ $lang['module_translatable'] = 'Translatable';
  * Translatable item model
  */
 $lang['translation_item_model_notification_save_before_adding_translations'] = 'Save the item before adding translations.';
+$lang['translation_item_model_translation'] = 'Translation';
 $lang['translation_item_model_translations'] = 'Translations';
 $lang['translation_item_model_add_translation'] = 'Add translation';
 
