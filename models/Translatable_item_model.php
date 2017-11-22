@@ -14,6 +14,7 @@ class Translatable_item_model extends Base_module_model
     {
         parent::__construct('translatable_item'); // table name
         $this->load->model('translatable_item_translation_model', 'translations');
+        $this->load->helper('translatable');
     }
 
     public function list_items($limit = NULL, $offset = NULL, $col = 'id', $order = 'asc', $just_count = FALSE)
@@ -35,6 +36,12 @@ class Translatable_item_model extends Base_module_model
     public function form_fields($values = array(), $related = array())
     {
         $fields = parent::form_fields($values, $related);
+
+        $fields['translations_fieldset'] = array(
+            'type' => 'section',
+            'tag' => 'h3',
+            'value' => lang('translation_item_model_translations'),
+        );
 
         $translatable_id = $this->_determine_key_field_value($values);
         if (isset($translatable_id)) {
@@ -82,11 +89,7 @@ class Translatable_item_model extends Base_module_model
         foreach ($supported_languages as $language_key => $language) {
             $field_name = $this->field_name_for_translation($language_key);
             $fields[$field_name] = array(
-                'label' => sprintf(
-                    '%s: %s',
-                    lang('translation_item_model_translation'),
-                    $language
-                )
+                'label' => $this->get_translation_label($language_key, $language)
             );
             if (!in_array($language_key, array_keys($lang_key_to_translation_map))) {
                 // Translation has not yet been persisted
@@ -98,6 +101,20 @@ class Translatable_item_model extends Base_module_model
             }
         }
         return $fields;
+    }
+
+    /**
+     * @param $language_key string two-letter country code (for flag search)
+     * @param $language     string language name
+     * @return string label to assign to the translation field
+     */
+    private function get_translation_label($language_key, $language)
+    {
+        $flag_icon = get_flag_for_language($language_key);
+        if ($flag_icon == null) {
+            $flag_icon = '';
+        }
+        return sprintf('%s %s', $flag_icon, $language);
     }
 
     /**
