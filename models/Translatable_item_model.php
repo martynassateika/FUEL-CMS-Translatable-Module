@@ -81,7 +81,13 @@ class Translatable_item_model extends Base_module_model
         $fields = array();
         foreach ($supported_languages as $language_key => $language) {
             $field_name = $this->field_name_for_translation($language_key);
-            $fields[$field_name] = array('label' => 'Translation: ' . $language);
+            $fields[$field_name] = array(
+                'label' => sprintf(
+                    '%s: %s',
+                    lang('translation_item_model_translation'),
+                    $language
+                )
+            );
             if (!in_array($language_key, array_keys($lang_key_to_translation_map))) {
                 // Translation has not yet been persisted
                 $fields[$field_name]['value'] = '';
