@@ -2,6 +2,8 @@
 
 The Translatable Module is a module for the FUEL CMS content management system that allows setting up translatable fields for existing models.
 
+![GitHub Logo](views/_docs/_translatable-module.jpg)
+
 ## Installation
 There are a couple ways to install the module. If you are using GIT you can use the following method to create a submodule:
 
