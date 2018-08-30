@@ -19,7 +19,7 @@ There are a couple ways to install the module. If you are using GIT you can use 
 1. Download the zip file from GitHub:
 [https://github.com/martynassateika/FUEL-CMS-Translatable-Module](https://github.com/martynassateika/FUEL-CMS-Translatable-Module)
 
-2. Create a "translatable" folder in fuel/modules/ and place the contents of the tester module folder in there.
+2. Create a "translatable" folder in fuel/modules/ and place the contents of the translatable module folder in there.
 
 3. Then to install, open up a Terminal window, "cd" to your FUEL CMS installation and type in:
 ``php index.php fuel/installer/install translatable``
