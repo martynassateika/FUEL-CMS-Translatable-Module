@@ -174,7 +174,7 @@ class Translatable_item_model extends Base_module_model
 
         // Filter the set of all POSTed fields, retaining only the translations
         $translation_fields = array_filter($values, function ($value) {
-            return starts_with($value, $this->get_translation_field_name_prefix());
+            return $this->starts_with($value, $this->get_translation_field_name_prefix());
         }, ARRAY_FILTER_USE_KEY);
 
         $translatable_item_id = $values[$this->key_field()];
@@ -202,6 +202,18 @@ class Translatable_item_model extends Base_module_model
             }
         }
         return $values;
+    }
+
+    /**
+     * @param $haystack string
+     * @param $needle string
+     * @return bool true if $haystack starts with $needle
+     */
+    private function starts_with($haystack, $needle)
+    {
+        $length = strlen($needle);
+        $substring = substr($haystack, 0, $length);
+        return $substring === $needle;
     }
 
     /**
